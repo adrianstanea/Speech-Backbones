@@ -1,7 +1,7 @@
 from phonemizer.backend import EspeakBackend
 
-from symbols import symbols, _symbol_to_id
-import cleaners as cleaners
+from .symbols import symbols, _symbol_to_id
+from .cleaners import to_lowercase, collapse_whitespace, to_ascii
 
 global_backend = EspeakBackend(
     language='ro',
@@ -15,10 +15,10 @@ global_backend = EspeakBackend(
 # print(phonemes)
 
 def text_to_phoneme(text : str, phoemizer : EspeakBackend):
-    text = cleaners.to_ascii(text)
-    text = cleaners.to_lowercase(text)
+    text = to_ascii(text)
+    text = to_lowercase(text)
     phonemes = phoemizer.phonemize([text], strip=False)[0]
-    phonemes = cleaners.collapse_whitespace(phonemes)
+    phonemes = collapse_whitespace(phonemes)
     return phonemes
 
 
