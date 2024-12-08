@@ -16,8 +16,8 @@ import torch
 
 import params
 from model import GradTTS
-from text import text_to_sequence, cmudict
-from text.symbols import symbols
+from tools.text_processing.symbols import symbols
+from tools.text_processing import global_backend, text_to_phoneme, cleaned_text_to_sequence
 from utils import intersperse
 
 import sys
@@ -64,12 +64,14 @@ if __name__ == '__main__':
     
     with open(args.file, 'r', encoding='utf-8') as f:
         texts = [line.strip() for line in f.readlines()]
-    cmu = cmudict.CMUDict('./resources/cmu_dictionary')
     
     with torch.no_grad():
         for i, text in enumerate(texts):
             print(f'Synthesizing {i} text...', end=' ')
-            x = torch.LongTensor(intersperse(text_to_sequence(text, dictionary=cmu), len(symbols))).cuda()[None]
+            x = text_to_phoneme(text, global_backend)
+            x = cleaned_text_to_sequence(x)
+            x = intersperse(x, len(symbols))
+            x = torch.LongTensor(x).cuda()[None] # TODO: might need to remove [None]
             x_lengths = torch.LongTensor([x.shape[-1]]).cuda()
             
             t = dt.datetime.now()
