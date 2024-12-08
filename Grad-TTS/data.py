@@ -12,11 +12,12 @@ import numpy as np
 import torch
 import torchaudio as ta
 
-from text import text_to_sequence, cmudict
-from text.symbols import symbols
 from utils import parse_filelist, intersperse
 from model.utils import fix_len_compatibility
 from params import seed as random_seed
+
+from tools.text_processing import text_to_phoneme, cleaned_text_to_sequence
+from tools.text_processing.symbols import symbols
 
 import sys
 sys.path.insert(0, 'hifi-gan')
@@ -24,11 +25,11 @@ from meldataset import mel_spectrogram
 
 
 class TextMelDataset(torch.utils.data.Dataset):
-    def __init__(self, filelist_path, cmudict_path, add_blank=True,
+    def __init__(self, filelist_path, phonemizer, add_blank=True,
                  n_fft=1024, n_mels=80, sample_rate=22050,
                  hop_length=256, win_length=1024, f_min=0., f_max=8000):
         self.filepaths_and_text = parse_filelist(filelist_path)
-        self.cmudict = cmudict.CMUDict(cmudict_path)
+        self.phonemizer = phonemizer
         self.add_blank = add_blank
         self.n_fft = n_fft
         self.n_mels = n_mels
@@ -42,9 +43,9 @@ class TextMelDataset(torch.utils.data.Dataset):
 
     def get_pair(self, filepath_and_text):
         filepath, text = filepath_and_text[0], filepath_and_text[1]
-        text = self.get_text(text, add_blank=self.add_blank)
+        phoneme = self.get_phonemes(text, add_blank=self.add_blank)
         mel = self.get_mel(filepath)
-        return (text, mel)
+        return (phoneme, mel)
 
     def get_mel(self, filepath):
         audio, sr = ta.load(filepath)
@@ -53,16 +54,17 @@ class TextMelDataset(torch.utils.data.Dataset):
                               self.win_length, self.f_min, self.f_max, center=False).squeeze()
         return mel
 
-    def get_text(self, text, add_blank=True):
-        text_norm = text_to_sequence(text, dictionary=self.cmudict)
+    def get_phonemes(self, text, add_blank=True):
+        phoneme = text_to_phoneme(text, self.phonemizer)
+        phoneme = cleaned_text_to_sequence(phoneme)
         if self.add_blank:
-            text_norm = intersperse(text_norm, len(symbols))  # add a blank token, whose id number is len(symbols)
-        text_norm = torch.IntTensor(text_norm)
-        return text_norm
+            phoneme = intersperse(phoneme, len(symbols))  # add a blank token, whose id number is len(symbols)
+        phoneme = torch.IntTensor(phoneme)
+        return phoneme
 
     def __getitem__(self, index):
-        text, mel = self.get_pair(self.filepaths_and_text[index])
-        item = {'y': mel, 'x': text}
+        phoneme, mel = self.get_pair(self.filepaths_and_text[index])
+        item = {'y': mel, 'x': phoneme}
         return item
 
     def __len__(self):
@@ -101,12 +103,12 @@ class TextMelBatchCollate(object):
 
 
 class TextMelSpeakerDataset(torch.utils.data.Dataset):
-    def __init__(self, filelist_path, cmudict_path, add_blank=True,
+    def __init__(self, filelist_path, phonemizer, add_blank=True,
                  n_fft=1024, n_mels=80, sample_rate=22050,
                  hop_length=256, win_length=1024, f_min=0., f_max=8000):
         super().__init__()
         self.filelist = parse_filelist(filelist_path, split_char='|')
-        self.cmudict = cmudict.CMUDict(cmudict_path)
+        self.phonemizer = phonemizer
         self.n_fft = n_fft
         self.n_mels = n_mels
         self.sample_rate = sample_rate
@@ -120,10 +122,10 @@ class TextMelSpeakerDataset(torch.utils.data.Dataset):
 
     def get_triplet(self, line):
         filepath, text, speaker = line[0], line[1], line[2]
-        text = self.get_text(text, add_blank=self.add_blank)
+        phoneme = self.get_phoneme(text, add_blank=self.add_blank)
         mel = self.get_mel(filepath)
         speaker = self.get_speaker(speaker)
-        return (text, mel, speaker)
+        return (phoneme, mel, speaker)
 
     def get_mel(self, filepath):
         audio, sr = ta.load(filepath)
@@ -132,20 +134,21 @@ class TextMelSpeakerDataset(torch.utils.data.Dataset):
                               self.win_length, self.f_min, self.f_max, center=False).squeeze()
         return mel
 
-    def get_text(self, text, add_blank=True):
-        text_norm = text_to_sequence(text, dictionary=self.cmudict)
+    def get_phoneme(self, text, add_blank=True):
+        phoneme = text_to_phoneme(text, self.phonemizer)
+        phoneme = cleaned_text_to_sequence(phoneme)
         if self.add_blank:
-            text_norm = intersperse(text_norm, len(symbols))  # add a blank token, whose id number is len(symbols)
-        text_norm = torch.LongTensor(text_norm)
-        return text_norm
+            phoneme = intersperse(phoneme, len(symbols))  # add a blank token, whose id number is len(symbols)
+        phoneme = torch.IntTensor(phoneme)
+        return phoneme
 
     def get_speaker(self, speaker):
         speaker = torch.LongTensor([int(speaker)])
         return speaker
 
     def __getitem__(self, index):
-        text, mel, speaker = self.get_triplet(self.filelist[index])
-        item = {'y': mel, 'x': text, 'spk': speaker}
+        phoneme, mel, speaker = self.get_triplet(self.filelist[index])
+        item = {'y': mel, 'x': phoneme, 'spk': speaker}
         return item
 
     def __len__(self):
