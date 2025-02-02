@@ -41,7 +41,7 @@ beta_max = 20.0
 pe_scale = 1000  # 1 for `grad-tts-old.pt` checkpoint
 
 # training parameters
-checkpoint_path = 'checkpoints/grad-tts-ro.pt'
+checkpoint_path = 'checkpts/grad-tts-ro.pt'
 log_dir = 'logs/new_exp'
 test_size = 4
 n_epochs = 10000
