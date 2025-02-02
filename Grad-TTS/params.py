@@ -9,7 +9,7 @@
 from model.utils import fix_len_compatibility
 
 # data parameters
-train_filelist_path = 'resources/filelists/SWARA_1_0/train_meta_v1_train.txt'
+train_filelist_path = 'resources/filelists/SWARA_1_0/finetune_meta_bas_1490_samples.csv'
 valid_filelist_path = 'resources/filelists/SWARA_1_0/train_meta_v1_val.txt'
 # test_filelist_path = 'resources/filelists/SWARA_1_0/test.txt' # TBD: currently not used
 add_blank = True
