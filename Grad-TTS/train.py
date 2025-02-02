@@ -55,8 +55,7 @@ beta_min = params.beta_min
 beta_max = params.beta_max
 pe_scale = params.pe_scale
 
-
-if __name__ == "__main__":
+def main():
     torch.manual_seed(random_seed)
     np.random.seed(random_seed)
 
@@ -173,3 +172,8 @@ if __name__ == "__main__":
 
         ckpt = model.state_dict()
         torch.save(ckpt, f=f"{log_dir}/grad_{epoch}.pt")
+
+
+
+if __name__ == "__main__":
+    main()
