@@ -91,13 +91,13 @@ def main():
     print('Initializing optimizer...')
     optimizer = torch.optim.Adam(params=model.parameters(), lr=learning_rate)
 
-    print('Logging test batch...')
-    test_batch = test_dataset.sample_test_batch(size=params.test_size)
-    for i, item in enumerate(test_batch):
-        mel = item['y']
-        logger.add_image(f'image_{i}/ground_truth', plot_tensor(mel.squeeze()),
-                         global_step=0, dataformats='HWC')
-        save_plot(mel.squeeze(), f'{log_dir}/original_{i}.png')
+    # print('Logging test batch...')
+    # test_batch = test_dataset.sample_test_batch(size=params.test_size)
+    # for i, item in enumerate(test_batch):
+    #     mel = item['y']
+    #     logger.add_image(f'image_{i}/ground_truth', plot_tensor(mel.squeeze()),
+    #                      global_step=0, dataformats='HWC')
+    #     save_plot(mel.squeeze(), f'{log_dir}/original_{i}.png')
 
     print('Start training...')
     iteration = 0
@@ -153,28 +153,28 @@ def main():
         if epoch % params.save_every > 0:
             continue
 
-        model.eval()
-        print('Synthesis...')
-        with torch.no_grad():
-            for i, item in enumerate(test_batch):
-                x = item['x'].to(torch.long).unsqueeze(0).cuda()
-                x_lengths = torch.LongTensor([x.shape[-1]]).cuda()
-                y_enc, y_dec, attn = model(x, x_lengths, n_timesteps=50)
-                logger.add_image(f'image_{i}/generated_enc',
-                                 plot_tensor(y_enc.squeeze().cpu()),
-                                 global_step=iteration, dataformats='HWC')
-                logger.add_image(f'image_{i}/generated_dec',
-                                 plot_tensor(y_dec.squeeze().cpu()),
-                                 global_step=iteration, dataformats='HWC')
-                logger.add_image(f'image_{i}/alignment',
-                                 plot_tensor(attn.squeeze().cpu()),
-                                 global_step=iteration, dataformats='HWC')
-                save_plot(y_enc.squeeze().cpu(), 
-                          f'{log_dir}/generated_enc_{i}.png')
-                save_plot(y_dec.squeeze().cpu(), 
-                          f'{log_dir}/generated_dec_{i}.png')
-                save_plot(attn.squeeze().cpu(), 
-                          f'{log_dir}/alignment_{i}.png')
+        # model.eval()
+        # print('Synthesis...')
+        # with torch.no_grad():
+        #     for i, item in enumerate(test_batch):
+        #         x = item['x'].to(torch.long).unsqueeze(0).cuda()
+        #         x_lengths = torch.LongTensor([x.shape[-1]]).cuda()
+        #         y_enc, y_dec, attn = model(x, x_lengths, n_timesteps=50)
+        #         logger.add_image(f'image_{i}/generated_enc',
+        #                          plot_tensor(y_enc.squeeze().cpu()),
+        #                          global_step=iteration, dataformats='HWC')
+        #         logger.add_image(f'image_{i}/generated_dec',
+        #                          plot_tensor(y_dec.squeeze().cpu()),
+        #                          global_step=iteration, dataformats='HWC')
+        #         logger.add_image(f'image_{i}/alignment',
+        #                          plot_tensor(attn.squeeze().cpu()),
+        #                          global_step=iteration, dataformats='HWC')
+        #         save_plot(y_enc.squeeze().cpu(), 
+        #                   f'{log_dir}/generated_enc_{i}.png')
+        #         save_plot(y_dec.squeeze().cpu(), 
+        #                   f'{log_dir}/generated_dec_{i}.png')
+        #         save_plot(attn.squeeze().cpu(), 
+        #                   f'{log_dir}/alignment_{i}.png')
 
         ckpt = model.state_dict()
         torch.save(ckpt, f=f"{log_dir}/grad_{epoch}.pt")
