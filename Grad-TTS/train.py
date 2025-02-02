@@ -21,6 +21,7 @@ from utils import plot_tensor, save_plot
 from tools.text_processing.symbols import symbols
 from tools.text_processing import global_backend # used as phonemizer
 
+checkpoint_path = params.checkpoint_path
 train_filelist_path = params.train_filelist_path
 valid_filelist_path = params.valid_filelist_path
 add_blank = params.add_blank
@@ -81,6 +82,11 @@ def main():
     print('Number of encoder + duration predictor parameters: %.2fm' % (model.encoder.nparams/1e6))
     print('Number of decoder parameters: %.2fm' % (model.decoder.nparams/1e6))
     print('Total parameters: %.2fm' % (model.nparams/1e6))
+
+    if checkpoint_path is not None:
+        print(f"Loading checkpoint from {checkpoint_path}...")
+        checkpoint = torch.load(checkpoint_path)
+        model.load_state_dict(checkpoint)
 
     print('Initializing optimizer...')
     optimizer = torch.optim.Adam(params=model.parameters(), lr=learning_rate)
