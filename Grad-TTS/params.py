@@ -9,9 +9,13 @@
 from model.utils import fix_len_compatibility
 
 # data parameters
-train_filelist_path = 'resources/filelists/SWARA_1_0/finetune_meta_bas_1490_samples.csv'
-valid_filelist_path = 'resources/filelists/SWARA_1_0/train_meta_v1_val.txt'
+train_filelist_path = '/workspace/local/metadata_SWARA1.0_train.csv'
+valid_filelist_path = '/workspace/local/metadata_SWARA1.0_val.csv'
 # test_filelist_path = 'resources/filelists/SWARA_1_0/test.txt' # TBD: currently not used
+log_dir = 'logs/no_ASCII_conversion'
+batch_size = 16
+
+
 add_blank = True
 n_feats = 80
 n_spks = 1  # 247 for Libri-TTS filelist and 1 for LJSpeech
@@ -41,12 +45,11 @@ beta_max = 20.0
 pe_scale = 1000  # 1 for `grad-tts-old.pt` checkpoint
 
 # training parameters
-checkpoint_path = 'checkpts/grad-tts-ro.pt'
-log_dir = 'logs/new_exp'
+checkpoint_path = "/workspace/local/Speech-Backbones/Grad-TTS/logs/no_ASCII_conversion/grad_100.pt" # None
+# log_dir = 'logs/new_exp'
 test_size = 4
-n_epochs = 10000
-batch_size = 16
+n_epochs = 1001
 learning_rate = 1e-4
 seed = 37
-save_every = 1
+save_every = 25
 out_size = fix_len_compatibility(2*22050//256)

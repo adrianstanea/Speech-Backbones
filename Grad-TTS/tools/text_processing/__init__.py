@@ -6,18 +6,13 @@ from .cleaners import to_lowercase, collapse_whitespace, to_ascii
 global_backend = EspeakBackend(
     language='ro',
     preserve_punctuation=True,
-    with_stress=True, # TBD - might want to use False
-    words_mismatch='ignore',
+    with_stress=True,
+    language_switch="remove-flags",
 )
 
-# text = "Aceasta este o propoziție în limba română."
-# phonemes = backend.phonemize([text], strip=False)[0]
-# print(phonemes)
-
 def text_to_phoneme(text : str, phoemizer : EspeakBackend):
-    text = to_ascii(text)
     text = to_lowercase(text)
-    phonemes = phoemizer.phonemize([text], strip=False)[0]
+    phonemes = phoemizer.phonemize([text], strip=True)[0]
     phonemes = collapse_whitespace(phonemes)
     return phonemes
 
