@@ -1,4 +1,6 @@
 **/__pycache__
 logs
-model/monotonic*
+**/monotonic_align/*.so
+**/monotonic_align/*.c
 **/out/*
+.venv/

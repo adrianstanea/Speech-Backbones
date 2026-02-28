@@ -6,24 +6,39 @@
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 # MIT License for more details.
 
+import json
 import numpy as np
 from tqdm import tqdm
+from scipy.io.wavfile import write
 
 import torch
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 
 import params
-from model import GradTTS
+from gradtts_ro.model import GradTTS
 from data import TextMelDataset, TextMelBatchCollate
 from utils import plot_tensor, save_plot
 
-from tools.text_processing.symbols import symbols
-from tools.text_processing import global_backend # used as phonemizer
-
-from inference_RO import text_to_phoneme, cleaned_text_to_sequence, intersperse, get_vocoder, write
+from gradtts_ro.text_processing import symbols, global_backend, text_to_phoneme, cleaned_text_to_sequence, intersperse
+from gradtts_ro.vocoder import HiFiGAN, AttrDict
 
 import argparse
+
+
+HIFIGAN_CONFIG = './checkpts/hifigan-config.json'
+HIFIGAN_CHECKPT = './checkpts/hifigan_univ_v1'
+
+
+def get_vocoder():
+    """Load HiFi-GAN vocoder for synthesis during training."""
+    with open(HIFIGAN_CONFIG) as f:
+        h = AttrDict(json.load(f))
+    vocoder = HiFiGAN(h)
+    vocoder.load_state_dict(torch.load(HIFIGAN_CHECKPT, map_location=lambda loc, storage: loc)['generator'])
+    _ = vocoder.cuda().eval()
+    vocoder.remove_weight_norm()
+    return vocoder
 
 
 checkpoint_path = params.checkpoint_path

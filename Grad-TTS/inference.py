@@ -15,15 +15,9 @@ from scipy.io.wavfile import write
 import torch
 
 import params
-from model import GradTTS
-from tools.text_processing.symbols import symbols
-from tools.text_processing import global_backend, text_to_phoneme, cleaned_text_to_sequence
-from utils import intersperse
-
-import sys
-sys.path.append('./hifi-gan/')
-from env import AttrDict
-from models import Generator as HiFiGAN
+from gradtts_ro.model import GradTTS
+from gradtts_ro.text_processing import symbols, global_backend, text_to_phoneme, cleaned_text_to_sequence, intersperse
+from gradtts_ro.vocoder import HiFiGAN, AttrDict
 
 
 HIFIGAN_CONFIG = './checkpts/hifigan-config.json'

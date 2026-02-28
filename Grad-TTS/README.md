@@ -19,37 +19,197 @@ Recently, denoising diffusion probabilistic models and generative score matching
 
 ## Installation
 
-Firstly, install all Python package requirements:
+### From GitHub (pip)
 
 ```bash
-pip install -r requirements.txt
+pip install git+https://github.com/adrianstanea/Speech-Backbones.git#subdirectory=Grad-TTS
+
+# Build the monotonic alignment C extension
+cd $(python -c "import gradtts_ro; print(gradtts_ro.__path__[0])")/model/monotonic_align
+python setup.py build_ext && cp build/lib.*/gradtts_ro/model/monotonic_align/core*.so .
 ```
 
-Secondly, build `monotonic_align` code (Cython):
+### Local Development (uv recommended)
 
 ```bash
-cd model/monotonic_align; python setup.py build_ext --inplace; cd ../..
+cd Grad-TTS
+
+# Install the package and all dependencies
+uv sync
+
+# Build the monotonic alignment C extension
+cd gradtts_ro/model/monotonic_align
+uv run python setup.py build_ext && cp build/lib.*/gradtts_ro/model/monotonic_align/core*.so .
+cd ../../..
 ```
 
-**Note**: code is tested on Python==3.6.9.
+### Local Development (pip)
 
-## Inference
+```bash
+cd Grad-TTS
 
-You can download Grad-TTS and HiFi-GAN checkpoints trained on LJSpeech* and Libri-TTS datasets (22kHz) from [here](https://drive.google.com/drive/folders/1grsfccJbmEuSBGQExQKr3cVxNV0xEOZ7?usp=sharing).
+pip install -e .
 
-***Note**: we open-source 2 checkpoints of Grad-TTS trained on LJSpeech. They are the same models but trained with different positional encoding scale: **x1** (`"grad-tts-old.pt"`, ICML 2021 sumbission model) and **x1000** (`"grad-tts.pt"`). To use the former set `params.pe_scale=1` and to use the latter set `params.pe_scale=1000`. Libri-TTS checkpoint was trained with scale **x1000**.
+# Build the monotonic alignment C extension
+cd gradtts_ro/model/monotonic_align
+python3 setup.py build_ext && cp build/lib.*/gradtts_ro/model/monotonic_align/core*.so .
+cd ../../..
+```
 
-Put necessary Grad-TTS and HiFi-GAN checkpoints into `checkpts` folder in root Grad-TTS directory (note: in `inference.py` you can change default HiFi-GAN path).
+> **Note:** The C extension compiles `core.pyx` into a shared library (`.so`). The build output is copied to the package directory for runtime import.
 
-1. Create text file with sentences you want to synthesize like `resources/filelists/synthesis.txt`.
-2. For single speaker set `params.n_spks=1` and for multispeaker (Libri-TTS) inference set `params.n_spks=247`.
-3. Run script `inference.py` by providing path to the text file, path to the Grad-TTS checkpoint, number of iterations to be used for reverse diffusion (default: 10) and speaker id if you want to perform multispeaker inference:
-    ```bash
-    python inference.py -f <your-text-file> -c <grad-tts-checkpoint> -t <number-of-timesteps> -s <speaker-id-if-multispeaker>
-    ```
-4. Check out folder called `out` for generated audios.
+## Quick Start
 
-You can also perform *interactive inference* by running Jupyter Notebook `inference.ipynb` or by using our [Google Colab Demo](https://colab.research.google.com/drive/1YNrXtkJQKcYDmIYJeyX8s5eXxB4zgpZI?usp=sharing).
+### From HuggingFace Hub
+
+```python
+from gradtts_ro import GradTTSRomanian
+
+pipe = GradTTSRomanian.from_pretrained("adrianstanea/Ro-Grad-TTS")
+audio = pipe("Buna ziua! Aceasta este o demonstratie.")
+pipe.save_wav(audio, "output.wav")
+```
+
+### From local checkpoints
+
+```python
+from gradtts_ro import GradTTSRomanian
+
+pipe = GradTTSRomanian.from_local(
+    model_path="path/to/grad-tts-base-1000.pt",
+    vocoder_path="path/to/hifigan_univ_v1",
+    vocoder_config_path="path/to/hifigan_config.json",
+)
+audio = pipe("Buna ziua! Aceasta este o demonstratie.")
+pipe.save_wav(audio, "output.wav")
+```
+
+### Using the example script
+
+```bash
+# From HuggingFace Hub
+uv run python examples/synthesize.py
+
+# From local checkpoints
+uv run python examples/synthesize.py \
+    --model-path path/to/grad-tts-base-1000.pt \
+    --vocoder-path path/to/hifigan_univ_v1 \
+    --vocoder-config path/to/hifigan_config.json
+
+# Custom text
+uv run python examples/synthesize.py --text "Salut, cum te cheama?"
+```
+
+## API Reference
+
+### `GradTTSRomanian.from_pretrained()`
+
+```python
+pipe = GradTTSRomanian.from_pretrained(
+    repo_id="adrianstanea/Ro-Grad-TTS",  # HuggingFace repo
+    variant="base",                       # Model variant (see below)
+    device=None,                          # "cpu", "cuda", or auto-detect
+)
+```
+
+### `GradTTSRomanian.from_local()`
+
+```python
+pipe = GradTTSRomanian.from_local(
+    model_path="path/to/grad-tts.pt",
+    vocoder_path="path/to/hifigan_univ_v1",
+    vocoder_config_path="path/to/hifigan_config.json",
+    config_path=None,   # Optional: model config JSON, uses defaults if None
+    device=None,        # "cpu", "cuda", or auto-detect
+)
+```
+
+### Synthesis
+
+```python
+# Single text
+audio = pipe("Romanian text here.", n_timesteps=50, temperature=1.5, length_scale=0.91)
+
+# Batch
+audios = pipe(["Text one.", "Text two."])
+
+# Save to file
+pipe.save_wav(audio, "output.wav")
+```
+
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `n_timesteps` | 50 | Diffusion reverse steps (more = higher quality, slower) |
+| `temperature` | 1.5 | Sampling variance (higher = more diverse) |
+| `length_scale` | 0.91 | Speech pace (> 1.0 = slower) |
+| `speaker_id` | None | Speaker ID for multi-speaker models |
+
+## Available Model Variants
+
+| Variant | Speaker | Samples | Fine-tune Epochs |
+|---------|---------|---------|-----------------|
+| `base` | SWARA baseline | all | 1000 |
+| `bas-10_15` | BAS | 10 | 15 |
+| `bas-10_50` | BAS | 10 | 50 |
+| `bas-10_100` | BAS | 10 | 100 |
+| `bas-950_15` | BAS | 950 | 15 |
+| `bas-950_50` | BAS | 950 | 50 |
+| `bas-950_100` | BAS | 950 | 100 |
+| `sgs-10_15` | SGS | 10 | 15 |
+| `sgs-10_50` | SGS | 10 | 50 |
+| `sgs-10_100` | SGS | 10 | 100 |
+| `sgs-950_15` | SGS | 950 | 15 |
+| `sgs-950_50` | SGS | 950 | 50 |
+| `sgs-950_100` | SGS | 950 | 100 |
+
+```python
+# Load a specific variant
+pipe = GradTTSRomanian.from_pretrained("adrianstanea/Ro-Grad-TTS", variant="bas-950_100")
+```
+
+## Model Weights
+
+Checkpoints are hosted on HuggingFace Hub at [`adrianstanea/Ro-Grad-TTS`](https://huggingface.co/adrianstanea/Ro-Grad-TTS):
+
+```
+adrianstanea/Ro-Grad-TTS/
+├── config.json
+├── hifigan_config.json
+├── models/
+│   ├── swara/grad-tts-base-1000.pt
+│   ├── bas/grad-tts-bas-{10,950}_{15,50,100}.pt
+│   ├── sgs/grad-tts-sgs-{10,950}_{15,50,100}.pt
+│   └── vocoder/hifigan_univ_v1
+```
+
+## Project Structure
+
+```
+Grad-TTS/
+├── gradtts_ro/                  # Complete pip-installable package
+│   ├── __init__.py
+│   ├── pipeline.py              # GradTTSRomanian inference API
+│   ├── model/                   # Grad-TTS architecture
+│   │   ├── tts.py               # GradTTS module
+│   │   ├── text_encoder.py      # Text encoder
+│   │   ├── diffusion.py         # Diffusion decoder
+│   │   └── monotonic_align/     # MAS C extension (requires build step)
+│   ├── text_processing/         # Romanian phonemization
+│   │   ├── __init__.py          # Espeak backend, converters
+│   │   ├── symbols.py           # IPA symbol set (179 symbols)
+│   │   └── cleaners.py          # Text normalization
+│   └── vocoder/                 # HiFi-GAN vocoder
+│       ├── models.py            # Generator architecture
+│       ├── meldataset.py        # mel_spectrogram function
+│       └── env.py               # AttrDict helper
+├── examples/
+│   └── synthesize.py            # Example synthesis script
+├── train.py                     # Training script
+├── data.py                      # Dataset classes
+├── finetune.sh                  # Speaker fine-tuning script
+├── pyproject.toml               # Package definition
+└── uv.lock                      # Reproducible dependency lock
+```
 
 ## Training
 

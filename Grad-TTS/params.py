@@ -6,7 +6,7 @@
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 # MIT License for more details.
 
-from model.utils import fix_len_compatibility
+from gradtts_ro.model.utils import fix_len_compatibility
 
 # data parameters
 train_filelist_path = '/workspace/local/metadata_SWARA1.0_train.csv'

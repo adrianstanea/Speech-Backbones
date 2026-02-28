@@ -14,12 +14,11 @@ from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 
 import params
-from model import GradTTS
+from gradtts_ro.model import GradTTS
 from data import TextMelSpeakerDataset, TextMelSpeakerBatchCollate
 from utils import plot_tensor, save_plot
 
-from tools.text_processing.symbols import symbols
-from tools.text_processing import global_backend # used as phonemizer
+from gradtts_ro.text_processing import symbols, global_backend
 
 
 train_filelist_path = params.train_filelist_path

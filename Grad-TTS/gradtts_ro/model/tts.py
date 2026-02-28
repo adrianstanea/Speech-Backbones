@@ -11,11 +11,11 @@ import random
 
 import torch
 
-from model import monotonic_align
-from model.base import BaseModule
-from model.text_encoder import TextEncoder
-from model.diffusion import Diffusion
-from model.utils import sequence_mask, generate_path, duration_loss, fix_len_compatibility
+from . import monotonic_align
+from .base import BaseModule
+from .text_encoder import TextEncoder
+from .diffusion import Diffusion
+from .utils import sequence_mask, generate_path, duration_loss, fix_len_compatibility
 
 
 class GradTTS(BaseModule):

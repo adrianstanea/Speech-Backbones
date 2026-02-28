@@ -13,15 +13,11 @@ import torch
 import torchaudio as ta
 
 from utils import parse_filelist, intersperse
-from model.utils import fix_len_compatibility
+from gradtts_ro.model.utils import fix_len_compatibility
 from params import seed as random_seed
 
-from tools.text_processing import text_to_phoneme, cleaned_text_to_sequence
-from tools.text_processing.symbols import symbols
-
-import sys
-sys.path.insert(0, 'hifi-gan')
-from meldataset import mel_spectrogram
+from gradtts_ro.text_processing import text_to_phoneme, cleaned_text_to_sequence, symbols
+from gradtts_ro.vocoder.meldataset import mel_spectrogram
 
 
 class TextMelDataset(torch.utils.data.Dataset):
