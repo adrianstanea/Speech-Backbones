@@ -16,8 +16,8 @@ import torch
 
 import params
 from model import GradTTS
-from text import text_to_sequence, cmudict
-from text.symbols import symbols
+from tools.text_processing.symbols import symbols
+from tools.text_processing import global_backend, text_to_phoneme, cleaned_text_to_sequence
 from utils import intersperse
 
 import sys
@@ -37,13 +37,13 @@ if __name__ == '__main__':
     parser.add_argument('-t', '--timesteps', type=int, required=False, default=10, help='number of timesteps of reverse diffusion')
     parser.add_argument('-s', '--speaker_id', type=int, required=False, default=None, help='speaker id for multispeaker model')
     args = parser.parse_args()
-    
+
     if not isinstance(args.speaker_id, type(None)):
         assert params.n_spks > 1, "Ensure you set right number of speakers in `params.py`."
         spk = torch.LongTensor([args.speaker_id]).cuda()
     else:
         spk = None
-    
+
     print('Initializing Grad-TTS...')
     generator = GradTTS(len(symbols)+1, params.n_spks, params.spk_emb_dim,
                         params.n_enc_channels, params.filter_channels,
@@ -53,7 +53,7 @@ if __name__ == '__main__':
     generator.load_state_dict(torch.load(args.checkpoint, map_location=lambda loc, storage: loc))
     _ = generator.cuda().eval()
     print(f'Number of parameters: {generator.nparams}')
-    
+
     print('Initializing HiFi-GAN...')
     with open(HIFIGAN_CONFIG) as f:
         h = AttrDict(json.load(f))
@@ -61,17 +61,19 @@ if __name__ == '__main__':
     vocoder.load_state_dict(torch.load(HIFIGAN_CHECKPT, map_location=lambda loc, storage: loc)['generator'])
     _ = vocoder.cuda().eval()
     vocoder.remove_weight_norm()
-    
+
     with open(args.file, 'r', encoding='utf-8') as f:
         texts = [line.strip() for line in f.readlines()]
-    cmu = cmudict.CMUDict('./resources/cmu_dictionary')
-    
+
     with torch.no_grad():
         for i, text in enumerate(texts):
             print(f'Synthesizing {i} text...', end=' ')
-            x = torch.LongTensor(intersperse(text_to_sequence(text, dictionary=cmu), len(symbols))).cuda()[None]
+            x = text_to_phoneme(text, global_backend)
+            x = cleaned_text_to_sequence(x)
+            x = intersperse(x, len(symbols))
+            x = torch.LongTensor(x).cuda()[None]
             x_lengths = torch.LongTensor([x.shape[-1]]).cuda()
-            
+
             t = dt.datetime.now()
             y_enc, y_dec, attn = generator.forward(x, x_lengths, n_timesteps=args.timesteps, temperature=1.5,
                                                    stoc=False, spk=spk, length_scale=0.91)
@@ -79,7 +81,7 @@ if __name__ == '__main__':
             print(f'Grad-TTS RTF: {t * 22050 / (y_dec.shape[-1] * 256)}')
 
             audio = (vocoder.forward(y_dec).cpu().squeeze().clamp(-1, 1).numpy() * 32768).astype(np.int16)
-            
+
             write(f'./out/sample_{i}.wav', 22050, audio)
 
     print('Done. Check out `out` folder for samples.')
